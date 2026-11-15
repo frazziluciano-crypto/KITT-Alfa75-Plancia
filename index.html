@@ -4,8 +4,8 @@
 const g = document.getElementById('scan');
 const NS = 'http://www.w3.org/2000/svg';
 const rects = [];
-const reds = ['#ff2222', '#ed0808', '#b90000', '#780000', '#3e0000'];
-const opacity = [1, 0.92, 0.77, 0.56, 0.38];
+const reds = ['#ff0000', '#e00000', '#b00000', '#800000', '#500000'];
+const opacity = [1, 1, 1, 1, 1]; // tutti i quadretti sono rossi pieni, mai rosa
 const SWEEP_MS = 2600;          // tempo per andare da un lato all'altro
 const TRAIL_DELAY_MS = 75;     // i quadretti posteriori seguono quello davanti
 const LEFT_X = 155;
@@ -22,7 +22,7 @@ for (let i = 4; i >= 0; i--) {
   r.setAttribute('opacity', opacity[i]);
   if (i === 0) {
     // La testa dello scanner è luminosa e rossa, mai bianca o arancione.
-    r.style.filter = 'drop-shadow(0 0 5px #ff0000) drop-shadow(0 0 3px #ff1010)';
+    r.style.filter = 'drop-shadow(0 0 5px #e00000)';
   }
   g.appendChild(r);
   rects[i] = r;
