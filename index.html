@@ -291,6 +291,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  let utteranceId=0, speechTask=null;
  let recognition=null, recognizing=false, wantListen=false;
  let restartTimer=null, wakeUntil=0, lastError='';
+ let scannerSequence=0, scannerHoldUntil=0;
  const status=document.createElement('span');
  status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
@@ -312,7 +313,9 @@ document.addEventListener('click',apriKittSchermoIntero);
  function listenSoon(delay=650){
   clearTimeout(restartTimer);
   if(!wantListen||speaking||recognizing||document.hidden||!recognition)return;
-  restartTimer=setTimeout(startListening,delay);
+  // Non riaprire il microfono mentre il suono dello scanner e' in riproduzione.
+  const scannerRemaining=Math.max(0,scannerHoldUntil-Date.now());
+  restartTimer=setTimeout(startListening,Math.max(delay,scannerRemaining+120));
  }
  function speak(text, finished, isGreeting=false){
   ++utteranceId;
@@ -360,6 +363,23 @@ document.addEventListener('click',apriKittSchermoIntero);
   // Navigazione nella stessa scheda: evita il blocco dei popup di Chrome.
   window.location.assign(url);
  }
+ // Prima KITT completa la frase. Solo dopo partono scanner e suono, per 4 secondi.
+ // Terminato l'effetto, viene aperta la pagina richiesta oppure riparte l'ascolto.
+ function replyThenScanner(message, url=null, durationMs=4000){
+  const sequence=++scannerSequence;
+  speak(message,()=>{
+   if(sequence!==scannerSequence)return;
+   scannerHoldUntil=Date.now()+durationMs;
+   window.kittStartScanner?.(durationMs);
+   setTimeout(()=>{
+    if(sequence!==scannerSequence)return;
+    window.kittStopScanner?.();
+    scannerHoldUntil=0;
+    if(url)openPage(url);
+    else listenSoon(300);
+   },durationMs);
+  });
+ }
  function performCommand(raw){
   const line=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
   report('Hai detto: '+raw);
@@ -371,45 +391,39 @@ document.addEventListener('click',apriKittSchermoIntero);
    speak('Ti ascolto, Luciano.');return;
   }
   if(/(?:youtube|you tube|iu tub|iutub)/.test(command)&&/(?:apr|avvia|lancia|vai|mostra|youtube|cerca)/.test(command)){
-   window.kittStartScanner?.(9500);
-   speak('Ricevuto Luciano, apro YouTube.',()=>setTimeout(()=>openPage('https://m.youtube.com/'),3500));
+   replyThenScanner('Ok Luciano, apro YouTube.','https://m.youtube.com/',4000);
    return;
   }
   if(/(?:maps|mappe|navigatore)/.test(command)&&/(?:apr|avvia|lancia|vai|mostra|maps|mappe)/.test(command)){
-   window.kittStartScanner?.(9500);
-   speak('Ricevuto Luciano, apro Google Maps.',()=>setTimeout(()=>openPage('https://www.google.com/maps'),3500));
+   replyThenScanner('Ok Luciano, apro Google Maps.','https://www.google.com/maps',4000);
    return;
   }
   if(/(?:che ore|che ora|dimmi l ora|orario)/.test(command)){
-   window.kittStartScanner?.(5500);
    const time=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-   speak('Luciano, sono le '+time+'.');return;
+   replyThenScanner('Luciano, sono le '+time+'.');return;
   }
   if(/(?:come stai|tutto bene|come va)/.test(command)){
-   window.kittStartScanner?.(5500);
-   speak('Tutti i sistemi sono operativi, Luciano.');return;
+   replyThenScanner('Tutti i sistemi sono operativi, Luciano.');return;
   }
   if(/(?:ciao|salutami|buongiorno|bentornato)/.test(command)){
-   window.kittStartScanner?.(5500);
-   speak(greeting);return;
+   replyThenScanner(greeting);return;
   }
   if(/(?:spegni|ferma|stop|arresta)/.test(command)&&/(?:scanner|scia|luce)/.test(command)){
+   ++scannerSequence;scannerHoldUntil=0;
    window.kittStopScanner?.();
    speak('Scanner disattivato, Luciano.');return;
   }
   if(/(?:attiva|accendi|avvia|mostra)/.test(command)&&/(?:scanner|scia|luce)/.test(command)){
-   window.kittStartScanner?.(12000);
-   speak('Scanner attivato, Luciano.');return;
+   replyThenScanner('Scanner attivato, Luciano.',null,12000);return;
   }
   if(/(?:grazie|bravo)/.test(command)){
-   window.kittStartScanner?.(4500);
-   speak('Sempre a tua disposizione, Luciano.');return;
+   replyThenScanner('Sempre a tua disposizione, Luciano.');return;
   }
-  window.kittStartScanner?.(5000);
-  speak('Ho ricevuto il comando, Luciano, ma non so ancora eseguirlo.');
+  replyThenScanner('Ho ricevuto il comando, Luciano, ma non so ancora eseguirlo.');
  }
  function startListening(){
   clearTimeout(restartTimer);
+  if(Date.now()<scannerHoldUntil){listenSoon(200);return;}
   if(!recognition||!wantListen||recognizing||speaking||document.hidden)return;
   try{recognition.start();recognizing=true;report('KITT in ascolto.')}catch(err){
    recognizing=false;
