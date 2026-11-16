@@ -327,18 +327,20 @@ document.addEventListener('click',apriKittSchermoIntero);
   if(!ttsSupported){
    report('Sintesi vocale non disponibile.');
    speaking=false; if(isGreeting)hasGreeted=true;
-   if(typeof finished==='function')finished();
+   if(typeof finished==='function')finished(false);
    listenSoon();return;
   }
   const u=new SpeechSynthesisUtterance(text);
   u.lang='it-IT';u.rate=1.03;u.pitch=.82;u.volume=1;
   const voice=pickItalianVoice();if(voice)u.voice=voice;
   let finishedThis=false, began=false;
-  function finish(){
+  function finish(completed){
    if(finishedThis||jobId!==utteranceId)return;
    finishedThis=true;clearTimeout(speechTask);
    speaking=false;animateVoice(false);
-   if(typeof finished==='function')finished();
+   // Per i comandi la sequenza dello scanner parte SOLO dall'evento
+   // onend di una frase realmente pronunciata, mai da un errore TTS.
+   if(typeof finished==='function')finished(completed===true && began);
    listenSoon();
   }
   u.onstart=()=>{
@@ -346,13 +348,13 @@ document.addEventListener('click',apriKittSchermoIntero);
    began=true;if(isGreeting)hasGreeted=true;
    animateVoice(true);report('KITT: '+text);
   };
-  u.onend=finish;
-  u.onerror=()=>{report('La voce non è partita: controlla audio e voce italiana.');finish()};
-  // In alcuni Chrome/Android la voce rimane in coda senza partire.
+  u.onend=()=>finish(true);
+  u.onerror=()=>{report('La voce non è partita: controlla audio e voce italiana.');finish(false)};
+  // Se Chrome non avvia la voce, NON avviare lo scanner in anticipo.
   speechTask=setTimeout(()=>{
-   if(!began&&jobId===utteranceId){try{synth.cancel()}catch(_){}finish()}
+   if(!began&&jobId===utteranceId){try{synth.cancel()}catch(_){}finish(false)}
   },4000);
-  try{synth.speak(u)}catch(_){finish()}
+  try{synth.speak(u)}catch(_){finish(false)}
  }
  function sayGreeting(fromTouch=false){
   if(hasGreeted)return;
@@ -363,21 +365,34 @@ document.addEventListener('click',apriKittSchermoIntero);
   // Navigazione nella stessa scheda: evita il blocco dei popup di Chrome.
   window.location.assign(url);
  }
- // Prima KITT completa la frase. Solo dopo partono scanner e suono, per 4 secondi.
- // Terminato l'effetto, viene aperta la pagina richiesta oppure riparte l'ascolto.
- function replyThenScanner(message, url=null, durationMs=4000){
+ // Sequenza rigorosa: voce completa -> breve pausa -> scanner+suono per 5 s -> apertura.
+ // Durante il parlato lo scanner rimane completamente spento.
+ function replyThenScanner(message, url=null, durationMs=5000){
   const sequence=++scannerSequence;
-  speak(message,()=>{
+  window.kittStopScanner?.();
+  speak(message,(spokenToEnd)=>{
    if(sequence!==scannerSequence)return;
-   scannerHoldUntil=Date.now()+durationMs;
-   window.kittStartScanner?.(durationMs);
+   if(!spokenToEnd){
+    // Una voce non riprodotta NON deve attivare lo scanner prima del parlato.
+    scannerHoldUntil=0;
+    report('Attendo la voce di KITT: scanner non avviato.');
+    return;
+   }
+   const afterVoicePauseMs=250;
+   // Il microfono rimane fermo anche durante la pausa e il suono.
+   scannerHoldUntil=Date.now()+afterVoicePauseMs+durationMs+150;
    setTimeout(()=>{
     if(sequence!==scannerSequence)return;
-    window.kittStopScanner?.();
-    scannerHoldUntil=0;
-    if(url)openPage(url);
-    else listenSoon(300);
-   },durationMs);
+    // Lo scanner si attiva solo DOPO l'evento onend della voce.
+    window.kittStartScanner?.(durationMs);
+    setTimeout(()=>{
+     if(sequence!==scannerSequence)return;
+     window.kittStopScanner?.();
+     scannerHoldUntil=0;
+     if(url)openPage(url);
+     else listenSoon(300);
+    },durationMs);
+   },afterVoicePauseMs);
   });
  }
  function performCommand(raw){
@@ -391,11 +406,11 @@ document.addEventListener('click',apriKittSchermoIntero);
    speak('Ti ascolto, Luciano.');return;
   }
   if(/(?:youtube|you tube|iu tub|iutub)/.test(command)&&/(?:apr|avvia|lancia|vai|mostra|youtube|cerca)/.test(command)){
-   replyThenScanner('Ok Luciano, apro YouTube.','https://m.youtube.com/',4000);
+   replyThenScanner('Ok Luciano, apro YouTube.','https://m.youtube.com/',5000);
    return;
   }
   if(/(?:maps|mappe|navigatore)/.test(command)&&/(?:apr|avvia|lancia|vai|mostra|maps|mappe)/.test(command)){
-   replyThenScanner('Ok Luciano, apro Google Maps.','https://www.google.com/maps',4000);
+   replyThenScanner('Ok Luciano, apro Google Maps.','https://www.google.com/maps',5000);
    return;
   }
   if(/(?:che ore|che ora|dimmi l ora|orario)/.test(command)){
