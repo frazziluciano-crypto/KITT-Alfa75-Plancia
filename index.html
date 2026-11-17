@@ -84,7 +84,7 @@
 <path d="M1273 1014 H1427" stroke="url(#silver)" stroke-width="3.5" stroke-linecap="round"/>
 <text x="773" y="1021" text-anchor="middle" fill="url(#silver)" font-family="Arial, Helvetica, sans-serif" font-style="italic" font-weight="900" font-size="38" textLength="718" lengthAdjust="spacingAndGlyphs">Alfa Romeo 75 Artificial Intelligence</text>
 </svg></div><script>
-// Scanner: forma e colori originali; velocità sincronizzata con il suono KITT (1 impulso ogni 1,28 s).
+// Scanner: 2 passaggi completi in 1,28 s, sincronizzati con il ciclo del suono originale.
 const g=document.getElementById('scan');
 const scanGlow=document.getElementById('scanGlow');
 const scanSheen=document.getElementById('scanSheen');
@@ -100,7 +100,7 @@ for(let i=0;i<N;i++){
 }
 // Scanner rosso: resta spento, parte solo dopo un comando vocale riconosciuto.
 let scannerActive=false, scannerStopAt=0, scannerStartedAt=0;
-const SWEEP_MS=1280; // Durata esatta di un passaggio, ricavata dal ciclo del suono originale.
+const SWEEP_MS=640; // 0,64 s per lato: andata+ritorno = 1,28 s (ciclo sonoro misurato).
 function setScanner(active, durationMs=6500){
  scannerActive=!!active;
  if(scannerActive){
@@ -117,7 +117,7 @@ function tick(t){
  if(scannerActive){
   if(t>=scannerStopAt){setScanner(false)}
   else{
-    // Clock dell'audio: la corsa segue i passaggi sonori ogni 1,28 s.
+    // Audio come clock: una corsa per ciascuna battuta, con andata+ritorno ogni 1,28 s.
     // Se Chrome ritarda o blocca il suono, l'animazione resta fluida e regolare.
     const audioTime=window.kittScannerAudioTime?.();
     const elapsedMs=Number.isFinite(audioTime)?audioTime*1000:Math.max(0,t-scannerStartedAt);
