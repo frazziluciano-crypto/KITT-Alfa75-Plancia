@@ -142,20 +142,26 @@ positions.forEach((p,col)=>{
  }
 });
 let kittSpeaking = false;
+let userSpeaking = false;
 let voiceAnimationStart = 0;
 const face=document.getElementById('buttonFace'),inset=document.getElementById('buttonInner'),cruise=document.getElementById('cruiseTitle'),pursuit=document.getElementById('pursuitTitle');
+// Il pulsante centrale indica la voce di Luciano, non quella di KITT.
+function setUserSpeaking(active){
+ userSpeaking=!!active;
+ const onPursuit=userSpeaking&&!kittSpeaking;
+ face.setAttribute('fill',onPursuit?'#1a4b9d':'url(#yellowFill)');
+ face.setAttribute('stroke',onPursuit?'#193d85':'#ae8417');
+ inset.setAttribute('stroke',onPursuit?'#4774bc':'#fff7a4');
+ cruise.setAttribute('visibility',onPursuit?'hidden':'visible');
+ pursuit.setAttribute('visibility',onPursuit?'visible':'hidden');
+}
+window.kittSetUserSpeaking=setUserSpeaking;
 function setVoiceFrame(index){
  for(let col=0;col<3;col++)for(let i=0;i<b[col].length;i++){
   const color=voiceFrames[index][col][i],el=b[col][i];
   if(!color){el.setAttribute('visibility','hidden');continue;}
   el.setAttribute('visibility','visible');el.setAttribute('fill',color);
  }
- const onPursuit=kittSpeaking;
- face.setAttribute('fill',onPursuit?'#1a4b9d':'url(#yellowFill)');
- face.setAttribute('stroke',onPursuit?'#193d85':'#ae8417');
- inset.setAttribute('stroke',onPursuit?'#4774bc':'#fff7a4');
- cruise.setAttribute('visibility',onPursuit?'hidden':'visible');
- pursuit.setAttribute('visibility',onPursuit?'visible':'hidden');
 }
 // The scanner is independent. The three voice bars animate only while KITT speaks.
 let prev=-1;
@@ -163,6 +169,7 @@ function kittSetSpeaking(active){
  if(kittSpeaking===active)return;
  kittSpeaking=active;
  if(active)voiceAnimationStart=performance.now();
+ setUserSpeaking(active?false:userSpeaking);
  prev=-1;
  if(!active)setVoiceFrame(0);
 }
@@ -173,7 +180,7 @@ function animationLoop(t){
  if(i!==prev){setVoiceFrame(i);prev=i;}
  requestAnimationFrame(animationLoop);
 }
-setVoiceFrame(0);requestAnimationFrame(animationLoop);
+setVoiceFrame(0);setUserSpeaking(false);requestAnimationFrame(animationLoop);
 function apriKittSchermoIntero(){
  if(document.fullscreenElement||document.webkitFullscreenElement)return;
  const root=document.documentElement;
@@ -291,6 +298,15 @@ document.addEventListener('click',apriKittSchermoIntero);
  let utteranceId=0, speechTask=null;
  let recognition=null, recognizing=false, wantListen=false;
  let restartTimer=null, wakeUntil=0, lastError='';
+ // Conserva il permesso di ascolto tra KITT e la pagina esterna nella stessa scheda.
+ // La sessionStorage appartiene solo a questa scheda e non contiene audio.
+ const kittReturnKey='kittResumeAfterExternalPageV1';
+ let returningToKitt=false, autoResuming=false;
+ try{
+  returningToKitt=sessionStorage.getItem(kittReturnKey)==='1';
+  if(returningToKitt)sessionStorage.removeItem(kittReturnKey);
+ }catch(_){}
+ if(returningToKitt){startedByTouch=true;hasGreeted=true;wantListen=true;}
  let scannerSequence=0, scannerHoldUntil=0;
  const status=document.createElement('span');
  status.setAttribute('role','status');status.setAttribute('aria-live','polite');
@@ -308,6 +324,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  }
  function stopRecognition(){
   clearTimeout(restartTimer);
+  window.kittSetUserSpeaking?.(false);
   if(recognizing&&recognition){try{recognition.abort()}catch(_){}}
  }
  function listenSoon(delay=650){
@@ -363,6 +380,10 @@ document.addEventListener('click',apriKittSchermoIntero);
  }
  function openPage(url){
   // Navigazione nella stessa scheda: evita il blocco dei popup di Chrome.
+  // Al ritorno con il tasto Indietro prova a riprendere l'ascolto.
+  try{
+   if(startedByTouch&&wantListen)sessionStorage.setItem(kittReturnKey,'1');
+  }catch(_){}
   window.location.assign(url);
  }
  // Sequenza rigorosa: voce completa -> breve pausa -> scanner+suono per 5 s -> apertura.
@@ -450,7 +471,12 @@ document.addEventListener('click',apriKittSchermoIntero);
   recognition=new R();
   recognition.lang='it-IT';recognition.interimResults=false;
   recognition.continuous=false;recognition.maxAlternatives=1;
+  recognition.onstart=()=>{autoResuming=false;};
+  // PURSUIT soltanto mentre Luciano sta pronunciando il comando.
+  recognition.onspeechstart=()=>{if(!speaking)window.kittSetUserSpeaking?.(true);};
+  recognition.onspeechend=()=>{window.kittSetUserSpeaking?.(false);};
   recognition.onresult=event=>{
+   window.kittSetUserSpeaking?.(false);
    const bits=[];
    for(let i=event.resultIndex;i<event.results.length;i++){
     if(event.results[i].isFinal)bits.push(event.results[i][0].transcript);
@@ -458,14 +484,23 @@ document.addEventListener('click',apriKittSchermoIntero);
    const said=bits.join(' ').trim();if(said)performCommand(said);
   };
   recognition.onerror=event=>{
+   window.kittSetUserSpeaking?.(false);
    lastError=event.error||'';
    report('Microfono: '+lastError);
    if(lastError==='not-allowed'||lastError==='service-not-allowed'){
     wantListen=false;
-    alert('KITT ha bisogno del microfono. Consenti il microfono nelle impostazioni del sito di Chrome, poi tocca di nuovo la plancia.');
+    // Chrome potrebbe richiedere un nuovo tocco dopo il tasto Indietro.
+    // Non mostrare un avviso invasivo per un tentativo automatico.
+    if(!autoResuming){
+     alert('KITT ha bisogno del microfono. Consenti il microfono nelle impostazioni del sito di Chrome, poi tocca di nuovo la plancia.');
+    }else{
+     report('Tocca una volta la plancia per riattivare il microfono.');
+    }
    }
+   autoResuming=false;
   };
   recognition.onend=()=>{
+   window.kittSetUserSpeaking?.(false);
    recognizing=false;
    if(wantListen&&!speaking){
     listenSoon(lastError==='network'?5000:850);
@@ -479,7 +514,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    if(!hasGreeted)sayGreeting(true);
    return;
   }
-  startedByTouch=true;wantListen=true;lastError='';
+  startedByTouch=true;wantListen=true;lastError='';autoResuming=false;
   if(!hasGreeted){sayGreeting(true)}
   else if(!speaking)startListening();
  }
@@ -488,12 +523,30 @@ document.addEventListener('click',apriKittSchermoIntero);
  document.addEventListener('keydown',event=>{
   if(event.key==='Enter'||event.key===' '){startFromTouch()}
  });
+ // Chrome può sospendere il riconoscimento anche se la pagina è mantenuta
+ // in memoria (Back/Forward Cache). Sblocca lo stato locale e ritenta.
+ function resumeVoiceAfterBack(){
+  if(!wantListen||document.hidden)return;
+  if(recognizing&&recognition){try{recognition.abort()}catch(_){}}
+  recognizing=false; lastError='';autoResuming=true;
+  listenSoon(700);
+ }
  document.addEventListener('visibilitychange',()=>{
-  if(document.hidden){stopRecognition()}
-  else if(wantListen){listenSoon(700)}
+  if(document.hidden){stopRecognition();recognizing=false;}
+  else if(wantListen){resumeVoiceAfterBack()}
  });
- // Il saluto può partire da solo; il microfono richiede un consenso iniziale.
- window.addEventListener('load',()=>sayGreeting(false),{once:true});
+ window.addEventListener('pageshow', event=>{
+  if(event.persisted||returningToKitt){
+   try{sessionStorage.removeItem(kittReturnKey)}catch(_){}
+   if(wantListen)resumeVoiceAfterBack();
+  }
+ });
+ // Su una navigazione normale: saluta come prima. Se torna da YouTube/Maps:
+ // non ripetere il saluto, tenta invece di riaprire il microfono.
+ window.addEventListener('load',()=>{
+  if(returningToKitt){resumeVoiceAfterBack();}
+  else sayGreeting(false);
+ },{once:true});
 })();
 </script>
 </body></html>
