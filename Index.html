@@ -152,6 +152,9 @@ for(let i=0;i<N;i++){
 }
 // Scanner rosso: resta spento, parte solo dopo un comando vocale riconosciuto.
 let scannerActive=false, scannerStopAt=0, scannerStartedAt=0;
+// Protezione: nessun altro evento può avviare lo scanner senza autorizzazione esplicita.
+let scannerPermit=false;
+window.kittAuthorizeCommandScanner=()=>{scannerPermit=true;};
 // Nel suono originale i picchi della prima coppia sono a 0,26 e 0,64 s,
 // e si ripetono ogni ~1,28 s. Il movimento segue questi picchi, non un metronomo separato.
 const AUDIO_CYCLE_MS=1280;
@@ -166,8 +169,12 @@ function setScanner(active, durationMs=6500){
  scanGlow.style.display=scannerActive?'':'none';
  scanSheen.style.display=scannerActive?'':'none';
 }
-window.kittStartScanner=(ms=6500)=>setScanner(true,ms);
-window.kittStopScanner=()=>setScanner(false);
+window.kittStartScanner=(ms=6500)=>{
+ if(!scannerPermit)return;
+ scannerPermit=false;
+ setScanner(true,ms);
+};
+window.kittStopScanner=()=>{scannerPermit=false;setScanner(false);};
 function tick(t){
  if(scannerActive){
   if(t>=scannerStopAt){setScanner(false)}
@@ -558,6 +565,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    setTimeout(()=>{
     if(sequence!==scannerSequence)return;
     // Lo scanner si attiva solo DOPO l'evento onend della voce.
+    window.kittAuthorizeCommandScanner?.();
     window.kittStartScanner?.(durationMs);
     setTimeout(()=>{
      if(sequence!==scannerSequence)return;
