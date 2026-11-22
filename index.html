@@ -316,6 +316,34 @@ document.addEventListener('click',apriKittSchermoIntero);
 */
 (()=>{
  const greeting='Ciao Luciano, bentornato.';
+ // Il token Groq rimane esclusivamente nel Worker Cloudflare.
+ const brainEndpoint='https://kitt-alfa75-brain.frazziluciano.workers.dev/';
+ const conversation=[];
+ let brainBusy=false;
+ async function askBrain(question){
+  if(brainBusy)return;
+  brainBusy=true;
+  try{
+   const controller=new AbortController();
+   const timeout=setTimeout(()=>controller.abort(),18000);
+   let response;
+   try{
+    response=await fetch(brainEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:question,history:conversation.slice(-12)}),signal:controller.signal});
+   }finally{clearTimeout(timeout)}
+   const data=await response.json();
+   if(!response.ok)throw Error(data.error||('HTTP '+response.status));
+   const answer=typeof data==='string'?data:(data.reply||data.response||data.answer||data.message||data.choices?.[0]?.message?.content);
+   if(typeof answer!=='string'||!answer.trim())throw Error('Risposta vuota del Worker');
+   conversation.push({role:'user',content:question},{role:'assistant',content:answer});
+   if(conversation.length>24)conversation.splice(0,conversation.length-24);
+   // La conversazione non avvia lo scanner: solo le barre vocali si animano.
+   speak(answer);
+  }catch(err){
+   report('Cervello KITT: '+err.message);
+   speak('Il collegamento al mio cervello non risponde. Controlliamo Cloudflare.');
+  }finally{brainBusy=false}
+ }
+
  const ttsSupported=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
  const R=window.SpeechRecognition||window.webkitSpeechRecognition;
  const synth=ttsSupported?window.speechSynthesis:null;
@@ -451,6 +479,7 @@ document.addEventListener('click',apriKittSchermoIntero);
   if(!command){
    speak('Ti ascolto, Luciano.');return;
   }
+  if(/(?:come mi chiamo|qual e il mio nome|sai il mio nome)/.test(command)){speak('Ti chiami Luciano.');return;}
   if(/(?:youtube|you tube|iu tub|iutub)/.test(command)&&/(?:apr|avvia|lancia|vai|mostra|youtube|cerca)/.test(command)){
    replyThenScanner('Ok Luciano, apro YouTube.','https://m.youtube.com/',5000);
    return;
@@ -464,10 +493,10 @@ document.addEventListener('click',apriKittSchermoIntero);
    replyThenScanner('Luciano, sono le '+time+'.');return;
   }
   if(/(?:come stai|tutto bene|come va)/.test(command)){
-   replyThenScanner('Tutti i sistemi sono operativi, Luciano.');return;
+   speak('I sistemi sono operativi, quindi direi che sto benissimo!');return;
   }
   if(/(?:ciao|salutami|buongiorno|bentornato)/.test(command)){
-   replyThenScanner(greeting);return;
+   speak('Ciao! Come posso aiutarti?');return;
   }
   if(/(?:spegni|ferma|stop|arresta)/.test(command)&&/(?:scanner|scia|luce)/.test(command)){
    ++scannerSequence;scannerHoldUntil=0;
@@ -478,9 +507,9 @@ document.addEventListener('click',apriKittSchermoIntero);
    replyThenScanner('Scanner attivato, Luciano.',null,12000);return;
   }
   if(/(?:grazie|bravo)/.test(command)){
-   replyThenScanner('Sempre a tua disposizione, Luciano.');return;
+   speak('Sempre a tua disposizione!');return;
   }
-  replyThenScanner('Ho ricevuto il comando, Luciano, ma non so ancora eseguirlo.');
+  askBrain(command);
  }
  function startListening(){
   clearTimeout(restartTimer);
