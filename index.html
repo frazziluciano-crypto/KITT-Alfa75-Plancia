@@ -166,7 +166,16 @@ function setScanner(active, durationMs=6500){
  scanGlow.style.display=scannerActive?'':'none';
  scanSheen.style.display=scannerActive?'':'none';
 }
-window.kittStartScanner=(ms=6500)=>setScanner(true,ms);
+// Un comando esplicito deve rilasciare un permesso monouso prima dell'avvio.
+let scannerPermit=false;
+window.kittAuthorizeCommandScanner=()=>{scannerPermit=true;};
+window.kittRevokeCommandScanner=()=>{scannerPermit=false;};
+window.kittStartScanner=(ms=6500)=>{
+ if(!scannerPermit)return false;
+ scannerPermit=false;
+ setScanner(true,ms);
+ return true;
+};
 window.kittStopScanner=()=>setScanner(false);
 function tick(t){
  if(scannerActive){
@@ -352,7 +361,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  const originalStart=window.kittStartScanner;
  const originalStop=window.kittStopScanner;
  if(typeof originalStart==='function')window.kittStartScanner=(ms=6500)=>{
-  const result=originalStart(ms);startSound(ms);return result;
+  const result=originalStart(ms);if(result===true)startSound(ms);return result;
  };
  if(typeof originalStop==='function')window.kittStopScanner=()=>{
   const result=originalStop();stopSound();return result;
