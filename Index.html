@@ -1,4 +1,56 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>KITT Alfa Romeo 75 — plancia tutta nitida</title><style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}body{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:manipulation;user-select:none;-webkit-user-select:none}.panel{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.panel svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}html:fullscreen,html:-webkit-full-screen{background:#000}</style></head><body><div class="panel"><svg viewBox="0 0 1536 1083" preserveAspectRatio="none" aria-label="Plancia Alfa Romeo 75 KITT ad alta definizione">
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>KITT Alfa Romeo 75 — plancia tutta nitida</title><style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}body{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:manipulation;user-select:none;-webkit-user-select:none}.panel{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.panel svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}html:fullscreen,html:-webkit-full-screen{background:#000}
+/* v0.6 - Accensione cinematografica all'avvio, nessuna modifica alla plancia originale. */
+body.kitt-booting .panel svg .orangeButton,
+body.kitt-booting .panel svg .redButton,
+body.kitt-booting .panel svg #centerButton {opacity:.07;transition:opacity .065s linear,filter .085s linear;}
+body.kitt-booting .panel svg .orangeButton.kitt-boot-lit {opacity:1;filter:drop-shadow(0 0 7px rgba(250,144,39,.48));}
+body.kitt-booting .panel svg .redButton.kitt-boot-lit {opacity:1;filter:drop-shadow(0 0 8px rgba(238,19,24,.5));}
+body.kitt-booting .panel svg #centerButton.kitt-boot-lit {opacity:1;filter:drop-shadow(0 0 9px rgba(255,212,18,.40));}
+</style><script id="kitt-android-bridge">
+/* Usato soltanto nell'app Android. In Chrome il file originale rimane invariato. */
+(function(){
+ if (!window.KITTAndroid) return;
+ let activeRecognition=null;
+ let activeUtterance=null;
+ function NativeRecognition(){this.onstart=null;this.onspeechstart=null;this.onspeechend=null;this.onresult=null;this.onerror=null;this.onend=null;this.lang='it-IT';}
+ NativeRecognition.prototype.start=function(){activeRecognition=this;window.KITTAndroid.startSpeech();};
+ NativeRecognition.prototype.abort=function(){window.KITTAndroid.stopSpeech();};
+ NativeRecognition.prototype.stop=function(){window.KITTAndroid.stopSpeech();};
+ window.__KITT_NATIVE_RECOGNITION=NativeRecognition;
+ window.SpeechRecognition=NativeRecognition;
+ window.webkitSpeechRecognition=NativeRecognition;
+ window.__kittNativeRecStart=function(){if(activeRecognition && activeRecognition.onstart)activeRecognition.onstart();};
+ window.__kittNativeSpeechStart=function(){if(activeRecognition?.onspeechstart)activeRecognition.onspeechstart();};
+ window.__kittNativeSpeechEnd=function(){if(activeRecognition?.onspeechend)activeRecognition.onspeechend();};
+ window.__kittNativeRecResult=function(text){
+  if(!activeRecognition||!activeRecognition.onresult)return;
+  const alt={transcript:String(text||''),confidence:1};
+  const result=[alt];result.isFinal=true;
+  activeRecognition.onresult({resultIndex:0,results:[result]});
+ };
+ window.__kittNativeRecError=function(error){if(activeRecognition && activeRecognition.onerror)activeRecognition.onerror({error:error||'no-speech'});};
+ window.__kittNativeRecEnd=function(){if(activeRecognition?.onspeechend)activeRecognition.onspeechend();if(activeRecognition?.onend)activeRecognition.onend();};
+ window.SpeechSynthesisUtterance=function(text){this.text=text;this.lang='it-IT';this.rate=1.03;this.pitch=.82;this.volume=1;this.onstart=null;this.onend=null;this.onerror=null;};
+ window.__KITT_NATIVE_UTTERANCE=window.SpeechSynthesisUtterance;
+ const nativeSynth={
+  getVoices(){return [{name:'Voce italiana Android',lang:'it-IT'}]},
+  cancel(){window.KITTAndroid.stopTts();activeUtterance=null;},
+  resume(){},
+  speak(u){activeUtterance=u;window.KITTAndroid.speak(u.text,u.rate,u.pitch);}
+ };
+ window.__KITT_NATIVE_TTS=nativeSynth;
+ try{Object.defineProperty(window,'speechSynthesis',{value:nativeSynth,configurable:true});}
+ catch(_){try{window.speechSynthesis=nativeSynth}catch(e){}}
+ window.__kittNativeTtsStart=function(){if(activeUtterance?.onstart)activeUtterance.onstart();};
+ window.__kittNativeTtsEnd=function(){if(activeUtterance?.onend)activeUtterance.onend();activeUtterance=null;};
+ window.__kittNativeTtsError=function(){if(activeUtterance?.onerror)activeUtterance.onerror();activeUtterance=null;};
+ window.__kittNativeResume=function(){
+  // Simula il tocco di riattivazione senza cambiare pulsanti e grafica.
+  try{document.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true}));}
+  catch(e){document.dispatchEvent(new Event('pointerdown',{bubbles:true}));}
+ };
+})();
+</script></head><body class="kitt-booting"><div class="panel"><svg viewBox="0 0 1536 1083" preserveAspectRatio="none" aria-label="Plancia Alfa Romeo 75 KITT ad alta definizione">
 <defs>
  <linearGradient id="orangeFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#efa04b"/><stop offset=".36" stop-color="#f39b34"/><stop offset="1" stop-color="#e98523"/></linearGradient>
  <linearGradient id="redFill" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#cb1015"/><stop offset=".40" stop-color="#d5070b"/><stop offset="1" stop-color="#b3080e"/></linearGradient>
@@ -310,46 +362,92 @@ document.addEventListener('click',apriKittSchermoIntero);
 })();
 </script>
 <script>
-/* Comandi vocali locali: nessuna chiave API, nessuna modifica estetica alla plancia.
+/* KITT 1.4 — stessi toni puliti v1.3, accelerati di un ulteriore 3%.
+   Solo accensione e suoi cinque attacchi; stessi pulsanti e stessa sequenza.
+   Seguendo la posizione REALE di MediaPlayer, niente ritardi JS cumulativi.
+   I cinque cambi/attacchi sono al ~2.32 / 2.81 / 3.32 / 3.96 / 4.93 s
+   del video originale, ritagliato a 2.25 s; tempi ridotti del 5%
+   per seguire il nuovo file riprodotto realmente da MediaPlayer.
+   Microfono, scanner dei comandi e grafica restano invariati.
+*/
+(()=>{
+ let completed=false, started=false, audioStartTime=0, frame=0, backupTimer=0, finishTimer=0;
+ let onCompleted=()=>{};
+ const oranges=[...document.querySelectorAll('svg .orangeButton')];
+ const reds=[...document.querySelectorAll('svg .redButton')];
+ const center=document.getElementById('centerButton');
+ const cues=[
+  {time:65,parts:[oranges[0],oranges[2]]},   // AIR + S1
+  {time:517,parts:[oranges[1],oranges[3]]},  // OIL + S2
+  {time:989,parts:[reds[0],reds[2]]},      // P1 + P3
+  {time:1582,parts:[reds[1],reds[3]]},      // P2 + P4
+  {time:2478,parts:[center]}                // NORMAL CRUISE
+ ];
+ let lastCue=-1;
+ window.kittBootIsRunning=()=>!completed;
+ window.kittAfterBoot=callback=>{
+  if(completed){callback();return;}
+  const earlier=onCompleted;onCompleted=()=>{earlier();callback();};
+ };
+ function endBoot(){
+  if(completed)return;
+  completed=true;
+  cancelAnimationFrame(frame);
+  clearTimeout(backupTimer);clearTimeout(finishTimer);
+  document.body.classList.remove('kitt-booting');
+  document.querySelectorAll('.kitt-boot-lit').forEach(el=>el.classList.remove('kitt-boot-lit'));
+  onCompleted();
+ }
+ function update(){
+  if(completed || !started)return;
+  let elapsed=performance.now()-audioStartTime;
+  if(window.KITTAndroid?.bootPositionMs){
+   try{const actual=window.KITTAndroid.bootPositionMs();if(actual>=0)elapsed=actual;}catch(_){}
+  }
+  for(let i=lastCue+1;i<cues.length&&elapsed>=cues[i].time;i++){
+   cues[i].parts.forEach(el=>el?.classList.add('kitt-boot-lit'));
+   lastCue=i;
+  }
+  frame=requestAnimationFrame(update);
+ }
+ function startTimeline(){
+  if(completed||started)return;
+  started=true;audioStartTime=performance.now();
+  frame=requestAnimationFrame(update);
+  // Riserva in caso MediaPlayer non invii la callback di fine (audio ~3.10s).
+  backupTimer=setTimeout(endBoot,4550);
+ }
+ window.__kittBootAudioStarted=()=>{startTimeline();};
+ window.__kittBootAudioFinished=()=>{
+  if(completed)return;
+  if(!started)startTimeline();
+  finishTimer=setTimeout(endBoot,220);
+ };
+ window.__kittBootAudioFailed=()=>{
+  if(completed)return;
+  if(!started)startTimeline();
+  finishTimer=setTimeout(endBoot,3800);
+ };
+ if(!window.KITTAndroid){endBoot();return;}
+ window.addEventListener('load',()=>{
+  try{window.KITTAndroid.playBootSound();}
+  catch(_){window.__kittBootAudioFailed();}
+  setTimeout(()=>{if(!started&&!completed)window.__kittBootAudioFailed();},1600);
+ },{once:true});
+})();
+</script><script>/* Comandi vocali locali: nessuna chiave API, nessuna modifica estetica alla plancia.
    Prima attivazione: un tocco nello schermo può essere richiesto da Android Chrome.
    Il riconoscimento vocale di Chrome richiede rete e autorizzazione microfono.
 */
 (()=>{
  const greeting='Ciao Luciano, bentornato.';
- // Il token Groq rimane esclusivamente nel Worker Cloudflare.
- const brainEndpoint='https://kitt-alfa75-brain.frazziluciano.workers.dev/';
- const conversation=[];
- let brainBusy=false;
- async function askBrain(question){
-  if(brainBusy){report('KITT sta ancora elaborando la domanda precedente.');return;}
-  brainBusy=true;
-  try{
-   const controller=new AbortController();
-   const timeout=setTimeout(()=>controller.abort(),18000);
-   let response;
-   try{
-    response=await fetch(brainEndpoint,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:question,history:conversation.slice(-12)}),signal:controller.signal});
-   }finally{clearTimeout(timeout)}
-   const data=await response.json();
-   if(!response.ok)throw Error(data.error||('HTTP '+response.status));
-   const answer=typeof data==='string'?data:(data.reply||data.response||data.answer||data.message||data.choices?.[0]?.message?.content);
-   if(typeof answer!=='string'||!answer.trim())throw Error('Risposta vuota del Worker');
-   conversation.push({role:'user',content:question},{role:'assistant',content:answer});
-   if(conversation.length>24)conversation.splice(0,conversation.length-24);
-   // La conversazione non avvia lo scanner: solo le barre vocali si animano.
-   speak(answer);
-  }catch(err){
-   report('Cervello KITT: '+err.message);
-   speak('Il collegamento al mio cervello non risponde. Controlliamo Cloudflare.');
-  }finally{brainBusy=false}
- }
-
- const ttsSupported=('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window);
- const R=window.SpeechRecognition||window.webkitSpeechRecognition;
- const synth=ttsSupported?window.speechSynthesis:null;
+ const ttsSupported=!!window.KITTAndroid||(('speechSynthesis' in window)&&('SpeechSynthesisUtterance' in window));
+ const R=window.KITTAndroid?window.__KITT_NATIVE_RECOGNITION:(window.SpeechRecognition||window.webkitSpeechRecognition);
+ const synth=window.KITTAndroid?window.__KITT_NATIVE_TTS:(ttsSupported?window.speechSynthesis:null);
  let startedByTouch=false, hasGreeted=false, speaking=false;
  let utteranceId=0, speechTask=null;
  let recognition=null, recognizing=false, wantListen=false;
+ let recognitionWatchdog=null;
  let restartTimer=null, wakeUntil=0, lastError='';
  // Conserva il permesso di ascolto tra KITT e la pagina esterna nella stessa scheda.
  // La sessionStorage appartiene solo a questa scheda e non contiene audio.
@@ -361,22 +459,6 @@ document.addEventListener('click',apriKittSchermoIntero);
  }catch(_){}
  if(returningToKitt){startedByTouch=true;hasGreeted=true;wantListen=true;}
  let scannerSequence=0, scannerHoldUntil=0;
- // Protezione: lo scanner può partire soltanto da una sequenza di comando autorizzata.
- let scannerCommandAuthorized=false;
- const scannerStartProtected=window.kittStartScanner;
- window.kittStartScanner=(ms=6500)=>{
-  if(!scannerCommandAuthorized){
-   console.log('[KITT] Scanner bloccato: richiesta non di comando.');
-   return;
-  }
-  return scannerStartProtected?.(ms);
- };
- function cancelPendingScanner(){
-  ++scannerSequence;
-  scannerHoldUntil=0;
-  scannerCommandAuthorized=false;
-  window.kittStopScanner?.();
- }
  const status=document.createElement('span');
  status.setAttribute('role','status');status.setAttribute('aria-live','polite');
  status.style.cssText='position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap';
@@ -393,6 +475,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  }
  function stopRecognition(){
   clearTimeout(restartTimer);
+  clearTimeout(recognitionWatchdog);
   window.kittSetUserSpeaking?.(false);
   if(recognizing&&recognition){try{recognition.abort()}catch(_){}}
  }
@@ -416,7 +499,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    if(typeof finished==='function')finished(false);
    listenSoon();return;
   }
-  const u=new SpeechSynthesisUtterance(text);
+  const u=window.KITTAndroid?new window.__KITT_NATIVE_UTTERANCE(text):new SpeechSynthesisUtterance(text);
   u.lang='it-IT';u.rate=1.03;u.pitch=.82;u.volume=1;
   const voice=pickItalianVoice();if(voice)u.voice=voice;
   let finishedThis=false, began=false;
@@ -453,6 +536,7 @@ document.addEventListener('click',apriKittSchermoIntero);
   try{
    if(startedByTouch&&wantListen)sessionStorage.setItem(kittReturnKey,'1');
   }catch(_){}
+  if(window.KITTAndroid){window.KITTAndroid.openDestination(url);return;}
   window.location.assign(url);
  }
  // Sequenza rigorosa: voce completa -> breve pausa -> scanner+suono per 5 s -> apertura.
@@ -474,9 +558,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    setTimeout(()=>{
     if(sequence!==scannerSequence)return;
     // Lo scanner si attiva solo DOPO l'evento onend della voce.
-    scannerCommandAuthorized=true;
-    try{window.kittStartScanner?.(durationMs)}
-    finally{scannerCommandAuthorized=false}
+    window.kittStartScanner?.(durationMs);
     setTimeout(()=>{
      if(sequence!==scannerSequence)return;
      window.kittStopScanner?.();
@@ -487,36 +569,44 @@ document.addEventListener('click',apriKittSchermoIntero);
    },afterVoicePauseMs);
   });
  }
+ // Una risposta normale NON avvia lo scanner e NON riproduce il suono.
+ // Lo scanner e' riservato alle azioni esplicite come "apri", "avvia" o "attiva".
+ function replyConversation(message){
+  ++scannerSequence;
+  scannerHoldUntil=0;
+  window.kittStopScanner?.();
+  speak(message);
+ }
  function performCommand(raw){
   const line=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
   report('Hai detto: '+raw);
   const hasWake=/(^| )ki+t+( |$)/.test(line)||/(^| )kit( |$)/.test(line);
-  if(!hasWake&&Date.now()>wakeUntil)return;
+  // Riconosce anche comandi espliciti senza ripetere sempre "KITT".
+  // Le frasi casuali restano ignorate fuori dalla breve finestra di dialogo.
+  const directCommand=/^(?:apri|avvia|lancia|vai su|mostra|portami su|cerca su|che ore|che ora|attiva|accendi|spegni|ferma|stop|arresta)\b/.test(line);
+  if(!hasWake&&Date.now()>wakeUntil&&!directCommand)return;
   if(hasWake)wakeUntil=Date.now()+10000;
   const command=line.replace(/\b(?:kitt|kit)\b/g,'').trim();
-  // Ogni nuova frase annulla un'eventuale animazione ritardata precedente.
-  cancelPendingScanner();
   if(!command){
    speak('Ti ascolto, Luciano.');return;
   }
-  if(/(?:come mi chiamo|qual e il mio nome|sai il mio nome)/.test(command)){speak('Ti chiami Luciano.');return;}
-  if(/(?:youtube|you tube|iu tub|iutub)/.test(command)&&/(?:apri|aprire|avvia|lancia|vai su|mostra)/.test(command)){
-   replyThenScanner('Ok Luciano, apro YouTube.','https://m.youtube.com/',5000);
+  if(/(?:youtube|you tube|iu tub|iutub)/.test(command)&&/^(?:apri|avvia|lancia|vai su|mostra|portami su|cerca su)\b/.test(command)){
+   replyThenScanner('Ok Luciano, apro YouTube.',window.KITTAndroid?'kittapp:YouTube':'https://m.youtube.com/',5000);
    return;
   }
-  if(/(?:maps|mappe|navigatore)/.test(command)&&/(?:apri|aprire|avvia|lancia|vai su|mostra)/.test(command)){
-   replyThenScanner('Ok Luciano, apro Google Maps.','https://www.google.com/maps',5000);
+  if(/(?:maps|mappe|navigatore)/.test(command)&&/^(?:apri|avvia|lancia|vai su|mostra|portami su)\b/.test(command)){
+   replyThenScanner('Ok Luciano, apro Google Maps.',window.KITTAndroid?'kittapp:Maps':'https://www.google.com/maps',5000);
    return;
   }
   if(/(?:che ore|che ora|dimmi l ora|orario)/.test(command)){
    const time=new Date().toLocaleTimeString('it-IT',{hour:'2-digit',minute:'2-digit'});
-   speak('Sono le '+time+'.');return;
+   replyConversation('Luciano, sono le '+time+'.');return;
   }
   if(/(?:come stai|tutto bene|come va)/.test(command)){
-   speak('I sistemi sono operativi, quindi direi che sto benissimo!');return;
+   replyConversation('Tutti i sistemi sono operativi, Luciano. Direi che sto benissimo!');return;
   }
   if(/(?:ciao|salutami|buongiorno|bentornato)/.test(command)){
-   speak('Ciao! Come posso aiutarti?');return;
+   replyConversation(greeting);return;
   }
   if(/(?:spegni|ferma|stop|arresta)/.test(command)&&/(?:scanner|scia|luce)/.test(command)){
    ++scannerSequence;scannerHoldUntil=0;
@@ -527,15 +617,36 @@ document.addEventListener('click',apriKittSchermoIntero);
    replyThenScanner('Scanner attivato, Luciano.',null,12000);return;
   }
   if(/(?:grazie|bravo)/.test(command)){
-   speak('Sempre a tua disposizione!');return;
+   replyConversation('Sempre a tua disposizione, Luciano.');return;
   }
-  askBrain(command);
+  // Il comando resta lo stesso, ma tollera anche "apri l'applicazione...".
+  const appCommand=command.match(/^(?:apri|avvia|lancia|aprite)\s+(?:(?:l|la|il)\s+)?(?:applicazione\s+|app\s+)?(?:di\s+|del\s+)?(.+)$/);
+  if(window.KITTAndroid && appCommand && appCommand[1]){
+   const appName=appCommand[1].trim();
+   replyThenScanner('Ok Luciano, apro '+appName+'.','kittapp:'+encodeURIComponent(appName),5000);
+   return;
+  }
+  replyConversation('Ti ascolto, Luciano. Per ora posso aprire le tue app e rispondere ad alcune domande. La conversazione libera con intelligenza artificiale richiede ancora un collegamento dedicato.');
  }
  function startListening(){
   clearTimeout(restartTimer);
   if(Date.now()<scannerHoldUntil){listenSoon(200);return;}
   if(!recognition||!wantListen||recognizing||speaking||document.hidden)return;
-  try{recognition.start();recognizing=true;report('KITT in ascolto.')}catch(err){
+  try{
+   recognizing=true;
+   recognition.start();
+   report('KITT in ascolto.');
+   clearTimeout(recognitionWatchdog);
+   // Seconda protezione: se il bridge Android perde gli eventi, ritenta.
+   if(window.KITTAndroid)recognitionWatchdog=setTimeout(()=>{
+    if(!recognizing||speaking||document.hidden||!wantListen)return;
+    report('Riattivo il microfono dopo un ascolto bloccato.');
+    try{recognition.abort()}catch(_){}
+    recognizing=false;
+    listenSoon(1300);
+   },15500);
+  }catch(err){
+   clearTimeout(recognitionWatchdog);
    recognizing=false;
    report('Non riesco ad avviare il microfono: '+(err.message||err));
    listenSoon(1800);
@@ -558,6 +669,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    const said=bits.join(' ').trim();if(said)performCommand(said);
   };
   recognition.onerror=event=>{
+   clearTimeout(recognitionWatchdog);
    window.kittSetUserSpeaking?.(false);
    lastError=event.error||'';
    report('Microfono: '+lastError);
@@ -574,6 +686,7 @@ document.addEventListener('click',apriKittSchermoIntero);
    autoResuming=false;
   };
   recognition.onend=()=>{
+   clearTimeout(recognitionWatchdog);
    window.kittSetUserSpeaking?.(false);
    recognizing=false;
    if(wantListen&&!speaking){
@@ -582,6 +695,7 @@ document.addEventListener('click',apriKittSchermoIntero);
   };
  }
  function startFromTouch(){
+  if(window.kittBootIsRunning?.())return;
   if(!recognition){
    if(!startedByTouch){alert('Per dare comandi a KITT serve Google Chrome su Android con il riconoscimento vocale disponibile.');}
    startedByTouch=true;
@@ -590,7 +704,14 @@ document.addEventListener('click',apriKittSchermoIntero);
   }
   startedByTouch=true;wantListen=true;lastError='';autoResuming=false;
   if(!hasGreeted){sayGreeting(true)}
-  else if(!speaking)startListening();
+  else if(!speaking){
+   // Un tocco sulla plancia forza il recupero se l'ascolto era bloccato.
+   if(recognizing){
+    stopRecognition();
+    recognizing=false;
+    listenSoon(500);
+   }else startListening();
+  }
  }
  // La prima interazione abilita il sistema vocale. Non sono aggiunti pulsanti.
  document.addEventListener('pointerdown',startFromTouch,{passive:true});
@@ -602,6 +723,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  function resumeVoiceAfterBack(){
   if(!wantListen||document.hidden)return;
   if(recognizing&&recognition){try{recognition.abort()}catch(_){}}
+  clearTimeout(recognitionWatchdog);
   recognizing=false; lastError='';autoResuming=true;
   listenSoon(700);
  }
@@ -619,6 +741,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  // non ripetere il saluto, tenta invece di riaprire il microfono.
  window.addEventListener('load',()=>{
   if(returningToKitt){resumeVoiceAfterBack();}
+  else if(window.kittAfterBoot)window.kittAfterBoot(()=>sayGreeting(false));
   else sayGreeting(false);
  },{once:true});
 })();
