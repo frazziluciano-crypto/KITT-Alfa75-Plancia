@@ -1,4 +1,4 @@
-<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>KITT Alfa Romeo 75 — scanner corretto v3</title><style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}body{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:manipulation;user-select:none;-webkit-user-select:none}.panel{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.panel svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}html:fullscreen,html:-webkit-full-screen{background:#000}
+<!doctype html><html lang="it"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><title>KITT Alfa Romeo 75 — plancia tutta nitida</title><style>html,body{margin:0;padding:0;background:#000;width:100%;height:100%;overflow:hidden;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}body{position:fixed;inset:0;width:100vw;height:100vh;height:100dvh;touch-action:manipulation;user-select:none;-webkit-user-select:none}.panel{position:absolute;inset:0;width:100%;height:100%;overflow:hidden}.panel svg{position:absolute;inset:0;width:100%;height:100%;display:block;pointer-events:none}html:fullscreen,html:-webkit-full-screen{background:#000}
 /* v0.6 - Accensione cinematografica all'avvio, nessuna modifica alla plancia originale. */
 body.kitt-booting .panel svg .orangeButton,
 body.kitt-booting .panel svg .redButton,
@@ -152,10 +152,6 @@ for(let i=0;i<N;i++){
 }
 // Scanner rosso: resta spento, parte solo dopo un comando vocale riconosciuto.
 let scannerActive=false, scannerStopAt=0, scannerStartedAt=0;
-// Protezione: nessun altro evento può avviare lo scanner senza autorizzazione esplicita.
-let scannerPermit=false;
-window.kittAuthorizeCommandScanner=()=>{scannerPermit=true;};
-window.kittRevokeScanner=()=>{scannerPermit=false;setScanner(false);};
 // Nel suono originale i picchi della prima coppia sono a 0,26 e 0,64 s,
 // e si ripetono ogni ~1,28 s. Il movimento segue questi picchi, non un metronomo separato.
 const AUDIO_CYCLE_MS=1280;
@@ -170,13 +166,8 @@ function setScanner(active, durationMs=6500){
  scanGlow.style.display=scannerActive?'':'none';
  scanSheen.style.display=scannerActive?'':'none';
 }
-window.kittStartScanner=(ms=6500)=>{
- if(!scannerPermit)return;
- scannerPermit=false;
- setScanner(true,ms);
-};
-window.kittStopScanner=()=>{scannerPermit=false;setScanner(false);};
-window.kittIsScannerActive=()=>scannerActive;
+window.kittStartScanner=(ms=6500)=>setScanner(true,ms);
+window.kittStopScanner=()=>setScanner(false);
 function tick(t){
  if(scannerActive){
   if(t>=scannerStopAt){setScanner(false)}
@@ -361,9 +352,7 @@ document.addEventListener('click',apriKittSchermoIntero);
  const originalStart=window.kittStartScanner;
  const originalStop=window.kittStopScanner;
  if(typeof originalStart==='function')window.kittStartScanner=(ms=6500)=>{
-  const result=originalStart(ms);
-  if(window.kittIsScannerActive?.())startSound(ms);
-  return result;
+  const result=originalStart(ms);startSound(ms);return result;
  };
  if(typeof originalStop==='function')window.kittStopScanner=()=>{
   const result=originalStop();stopSound();return result;
@@ -569,7 +558,6 @@ document.addEventListener('click',apriKittSchermoIntero);
    setTimeout(()=>{
     if(sequence!==scannerSequence)return;
     // Lo scanner si attiva solo DOPO l'evento onend della voce.
-    window.kittAuthorizeCommandScanner?.();
     window.kittStartScanner?.(durationMs);
     setTimeout(()=>{
      if(sequence!==scannerSequence)return;
@@ -587,14 +575,7 @@ document.addEventListener('click',apriKittSchermoIntero);
   ++scannerSequence;
   scannerHoldUntil=0;
   window.kittStopScanner?.();
-  window.kittRevokeScanner?.();
-  speak(message,()=>{
-   // Anche dopo la fine del parlato una risposta informativa deve restare silenziosa.
-   ++scannerSequence;
-   scannerHoldUntil=0;
-   window.kittStopScanner?.();
-   window.kittRevokeScanner?.();
-  });
+  speak(message);
  }
  function performCommand(raw){
   const line=raw.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
